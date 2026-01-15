@@ -1,5 +1,6 @@
 from transformer.BHViT import BHViTForImageClassification
 from transformers import ViTConfig
+import os
 import torch
 import torch.nn as nn
 from torch.nn.modules._functions import SyncBatchNorm as sync_batch_norm
@@ -190,7 +191,29 @@ class SyncBatchNormT(nn.SyncBatchNorm):
 
 
 def get_model(args, model_config, model_type, weight_bits, input_bits):
-    config = ViTConfig.from_pretrained(model_config)
+    # Try to load configuration from a local path first to avoid attempting to fetch from HuggingFace hub
+    current_dir = os.getcwd()
+    model_config = os.path.join(current_dir, model_config)
+    # print(f"current_dir:{current_dir}")
+    # print(f"model_config:{model_config}")
+    # print(f"os.path.isdir(model_config):{os.path.isdir(model_config)}")
+    if os.path.isdir(model_config):
+        config_file = os.path.join(model_config, "config.json")
+        if os.path.isfile(config_file):
+            config = ViTConfig.from_json_file(config_file)
+        else:
+            try:
+                # attempt to load from the directory (local_files_only prevents hub access)
+                config = ViTConfig.from_pretrained(model_config, local_files_only=True)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load config from local directory '{model_config}': {e}")
+    elif os.path.isfile(model_config):
+        config = ViTConfig.from_json_file(model_config)
+    else:
+        try:
+            config = ViTConfig.from_pretrained(model_config)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load config '{model_config}': {e}")
     
     config.drop_path = args.drop_path
     config.layer_norm_eps = 1e-5
@@ -205,7 +228,7 @@ def get_model(args, model_config, model_type, weight_bits, input_bits):
     config.weight_bits = weight_bits
     config.input_bits = input_bits
     config.some_fp = args.some_fp
-    if model_type == "dbhvit":
+    if model_type in ["dbhvit", "BHVIT"]:
         model = BHViTForImageClassification(config=config)
     else:
         raise NotImplementedError("Need to specify a supported model type.")

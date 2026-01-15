@@ -312,11 +312,16 @@ def main(args):
 
     teacher_model = None
     #regnety_160,deit_small_patch16_224
+    if args.data_set == "CIFAR":
+        num_classes = 100
+    else:
+        num_classes = 1000
+        
     if args.teacher_model:
         teacher_model = create_model(
             'deit_small_patch16_224',
             pretrained=True,
-            num_classes=1000,)
+            num_classes=num_classes,)
         teacher_model.to(device)
         teacher_model.eval()
         teacher_model_without_ddp = teacher_model
