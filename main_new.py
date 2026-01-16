@@ -147,7 +147,8 @@ def get_args_parser():
     # Dataset parameters
     parser.add_argument('--data-path', default='/data/huikong/dataset/imagenet-1k/ILSVRC2012', type=str,
                         help='dataset path')
-    parser.add_argument('--data-set', default='IMNET', choices=['CIFAR', 'IMNET', 'INAT', 'INAT19'],
+    parser.add_argument('--data-set', default='IMNET', choices=['CIFAR', 'IMNET', 'INAT', 'INAT19',
+                                                                'chaoyang', 'flower'],
                         type=str, help='Image Net dataset path')
     parser.add_argument('--inat-category', default='name',
                         choices=['kingdom', 'phylum', 'class', 'order', 'supercategory', 'family', 'genus', 'name'],
@@ -312,18 +313,22 @@ def main(args):
 
     teacher_model = None
     #regnety_160,deit_small_patch16_224
-    if args.data_set == "CIFAR":
-        num_classes = 100
-    else:
-        num_classes = 1000
         
     if args.teacher_model:
         teacher_model = create_model(
             'deit_small_patch16_224',
             pretrained=True,
-            num_classes=num_classes,)
-        teacher_model.to(device)
-        teacher_model.eval()
+            num_classes=args.nb_classes,)
+        try:
+            checkpoint_t = torch.load(args.teacher_model_file, map_location="cpu", weights_only=False)
+            teacher_model.load_state_dict(checkpoint_t["model"])
+            teacher_model.to(device)
+            teacher_model.eval()
+            print(f"Teacher model loaded successfully from: {args.teacher_model_file}")
+        except:
+            teacher_model.to(device)
+            teacher_model.eval()
+
         teacher_model_without_ddp = teacher_model
         if args.distributed:
             teacher_model = torch.nn.parallel.DistributedDataParallel(teacher_model, device_ids=[args.gpu])
@@ -377,7 +382,7 @@ def main(args):
                 criterion2, data_loader_train,
                 optimizer, device, epoch, loss_scaler,
                 args.clip_grad, model_ema, mixup_fn
-            )            
+            )     
 
 
         lr_scheduler.step(epoch)
@@ -421,7 +426,9 @@ def main(args):
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                      **{f'test_{k}': v for k, v in test_stats.items()},
                      'epoch': epoch,
-                     'n_parameters': n_parameters}
+                     'n_parameters': n_parameters,
+                     'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                     }
 
         if args.output_dir and utils.is_main_process():
             with (output_dir / "log.txt").open("a") as f:

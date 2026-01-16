@@ -14,6 +14,7 @@ from timm.data import Mixup
 from timm.utils import accuracy, ModelEma
 
 import utils
+from losses import DistributionLoss
 
 
 def train_mix_epoch(model: torch.nn.Module, teacher_model: torch.nn.Module, criterion: torch.nn.Module,
@@ -196,6 +197,8 @@ def train_one_epoch(model: torch.nn.Module, teacher_model: torch.nn.Module, crit
 
         with torch.cuda.amp.autocast():
             outputs = model(samples)
+            acc1, acc5 = accuracy(outputs.logits, targets, topk=(1, 5))
+            batch_size = outputs.logits.shape[0]
             if teacher_model is not None and mixup_fn is not None:
                 with torch.no_grad():
                     teacher_outputs = teacher_model(samples)
@@ -230,11 +233,12 @@ def train_one_epoch(model: torch.nn.Module, teacher_model: torch.nn.Module, crit
 
         metric_logger.update(loss=loss_value)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+        metric_logger.meters["acc1"].update(acc1.item(), n=batch_size)
+        metric_logger.meters["acc5"].update(acc5.item(), n=batch_size)
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-
 
 @torch.no_grad()
 def evaluate(data_loader, model, device):

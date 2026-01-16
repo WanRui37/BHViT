@@ -5,11 +5,13 @@ import os
 import json
 
 import torch
+import torch.utils.data as data
 from torchvision import datasets, transforms
 from torchvision.datasets.folder import ImageFolder, default_loader
 
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import create_transform
+from PIL import Image
 
 
 class INatDataset(ImageFolder):
@@ -75,6 +77,14 @@ def build_dataset(is_train, args):
         dataset = INatDataset(args.data_path, train=is_train, year=2019,
                               category=args.inat_category, transform=transform)
         nb_classes = dataset.nb_classes
+    elif args.data_set == 'chaoyang':
+        if is_train:
+           a="train.json"
+        else:
+           a="test.json"
+            
+        dataset = CHAOYANG(root=args.data_path, json_name=a, train=is_train,transform=transform)
+        nb_classes = 4
 
     return dataset, nb_classes
 
@@ -119,3 +129,50 @@ def build_transform(is_train, args):
     t.append(transforms.ToTensor())
     t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
     return transforms.Compose(t)
+
+class CHAOYANG(data.Dataset):
+    def __init__(self, root, json_name=None, path_list=None, label_list=None, train=True, transform=None):
+        imgs = []
+        labels = []
+        if json_name:
+            json_path = os.path.join(root,json_name)
+            with open(json_path,'r') as f:
+                load_list = json.load(f)
+                for i in range(len(load_list)):
+                    img_path = os.path.join(root,load_list[i]["name"])
+                    imgs.append(img_path)
+                    labels.append(load_list[i]["label"])
+        if (path_list and label_list):
+            imgs = path_list
+            labels = label_list
+        self.transform = transform
+        self.train = train  # training set or test set
+        self.dataset='chaoyang'
+    
+        self.nb_classes=4
+        if self.train:
+            self.train_data, self.train_labels = imgs,labels
+            self.train_noisy_labels=[i for i in self.train_labels]
+            self.noise_or_not = [True for i in range(self.__len__())]
+        else:
+            self.test_data, self.test_labels = imgs,labels
+
+    def __getitem__(self, index):
+        if self.train:
+            img, target = self.train_data[index], self.train_noisy_labels[index]
+        else:
+            img, target = self.test_data[index], self.test_labels[index]
+    
+        img = Image.open(img)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+
+        return img, target
+
+    def __len__(self):
+        if self.train:
+            return len(self.train_data)
+        else:
+            return len(self.test_data)
