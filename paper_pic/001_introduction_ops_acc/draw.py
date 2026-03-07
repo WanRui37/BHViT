@@ -41,12 +41,12 @@ def plot_accuracy_compute_tradeoff():
     data = [
         # Transformer/ViT 类别
         ("DeiT-Small", "Transformer", "32-32", 46.0, 70.56),
-        ("Q-ViT-T 4-bit", "Transformer", "4-4", 1.41, 74.3),
+        ("Q-ViT-T 4-bit", "Transformer", "4-4", 1.41, 72.66),
         ("Q-ViT-S 2-bit", "Transformer", "2-2", 2.83, 68.30),
         ("Q-ViT-S 1-bit", "Transformer", "1-1", 1.41, 50.26),
         ("GSB-ViT-S 1-bit", "Transformer", "1-1", 1.68, 71.10),
-        ("BHViT-T", "Transformer", "4-4", 1.56, 75.75),
-        ("BHViT-S", "Transformer", "1-1", 1.56, 75.17),
+        ("BHViT-T", "Transformer", "4-4", 1.56, 72.94),
+        ("BHViT-S", "Transformer", "1-1", 1.56, 72.37),
         # CNN/BNN 类别
         ("ResNet-18", "CNN", "32-32", 18.1, 72.50),
         ("XNOR-Net-18", "CNN", "1-1", 1.67, 53.76),
@@ -88,7 +88,7 @@ def plot_accuracy_compute_tradeoff():
     }
 
     # 创建图形
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(6, 6))
 
     # 定义每个簇的放大因子
     scale_factors = {0: 2.0, 1: 3.0, 2: 4.0}  # 可根据需要调整每个簇的放大因子
@@ -164,11 +164,23 @@ def plot_accuracy_compute_tradeoff():
 
                 # 为所有点添加标注
                 for _, row in subset.iterrows():
-                    if row["Model"] in ["Q-ViT-T 4-bit", "IR-Net", "DeiT-Small"]:
+                    if row["Model"] in ["IR-Net", "DeiT-Small"]:
                         ax.annotate(
                             row["Model"],
                             (row["OPs"], row["Accuracy"]),
                             xytext=(-10, -5),  # 左下角偏移
+                            textcoords="offset points",
+                            fontsize=11,
+                            ha="right",  # 水平右对齐
+                            va="top",  # 垂直顶部对齐
+                            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.7, edgecolor="gray"),
+                            arrowprops=dict(arrowstyle="-", color="black", lw=0.5),  # 添加连线
+                        )
+                    elif row["Model"] in ["Q-ViT-T 4-bit"]:
+                        ax.annotate(
+                            row["Model"],
+                            (row["OPs"], row["Accuracy"]),
+                            xytext=(-10, 20),  # 左下角偏移
                             textcoords="offset points",
                             fontsize=11,
                             ha="right",  # 水平右对齐
@@ -217,7 +229,7 @@ def plot_accuracy_compute_tradeoff():
                         ax.annotate(
                             row["Model"],
                             (row["OPs"], row["Accuracy"]),
-                            xytext=(-15, 5),  # 左侧偏移
+                            xytext=(-15, -12),  # 左侧偏移
                             textcoords="offset points",
                             fontsize=11,
                             ha="right",  # 水平右对齐

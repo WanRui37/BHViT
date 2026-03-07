@@ -14,7 +14,7 @@ CUDA_VISIBLE_DEVICES=4,5 torchrun --nproc_per_node=2 --master_port=25641 main_ne
     --data-set=CIFAR \
     --num-workers=2 \
     --batch-size=64 \
-    --epochs=300 \
+    --epochs=900 \
     --dropout=0.0 \
     --drop-path=0.0 \
     --opt=adamw \
