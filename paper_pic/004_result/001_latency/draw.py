@@ -26,26 +26,38 @@ def draw_latency_multi_sizes(
         - "lat": np.array shape (2,3): rows [w4a4g4, w8a8g8], cols [Dense, BDS-unfused, BDS-fused]
         - "ref": float: Dense w1a1 latency (optional; can be None to hide)
         - "err": np.array shape (2,3) or None (optional)
+
+    Speed ratio (normalized to w4 Dense):
+      baseline = latency(w4 Dense)
+      speed(x) = baseline / latency(x)
+      Thus speed(w4 Dense) = 1.
+      If ref exists, also plot it as the 7th point: speed(ref)=baseline/ref.
     """
 
     labels_groups = ["w4a4  g=4", "w8a8  g=8"]
     methods = ["Dense", "BDS-unfused", "BDS-fused"]
 
     # Okabe-Ito (colorblind-friendly)
-    c_dense  = "#ABBD4A"  # blue
-    c_unfuse = "#BDD133"  # orange
-    c_fuse   = "#3B9570"  # green
-    c_ref    = "#7F7F7F"  # gray
+    c_dense  = "#ABBD4A"
+    c_unfuse = "#BDD133"
+    c_fuse   = "#3B9570"
+    c_ref    = "#7F7F7F"
     colors = [c_dense, c_unfuse, c_fuse]
+
+    # NEW: speed ratio line style
+    c_speed = "#6F4C9B"  # was "black"
+    speed_marker = "o"
+    speed_lw = 1.4
+    speed_ms = 3.2
 
     # Tighter bar spacing (you said spacing too large)
     bar_w = 0.26
-    inner_gap = 0.00  # smaller -> bars closer
+    inner_gap = 0.00
     offsets = (np.arange(3) - 1) * (bar_w + inner_gap)
 
     # x positions for 2 groups + ref, keep compact
-    group_x = np.array([0.0, 1.05])  # bring the two groups closer
-    ref_x = 1.85                     # bring reference closer too
+    group_x = np.array([0.0, 1.05])
+    ref_x = 1.85
 
     # Figure: 4 subplots in one row
     fig, axes = plt.subplots(
@@ -63,6 +75,18 @@ def draw_latency_multi_sizes(
         if ref is not None:
             global_max = max(global_max, float(ref))
     y_lim_top = global_max * 1.25
+
+    # NEW: global speed y-limit so all right-axes scale consistently
+    global_speed_max = 1.0
+    for s in sizes:
+        lat = np.asarray(latency_data[s]["lat"], dtype=float)
+        base = float(lat[0, 0])  # w4 Dense baseline
+        speed = base / lat       # (2,3)
+        global_speed_max = max(global_speed_max, float(np.max(speed)))
+        ref = latency_data[s].get("ref", None)
+        if ref is not None:
+            global_speed_max = max(global_speed_max, float(base / float(ref)))
+    speed_lim_top = global_speed_max * 1.25
 
     panel_tags = ["(a)", "(b)", "(c)", "(d)"]
 
@@ -86,7 +110,7 @@ def draw_latency_multi_sizes(
                 yerr=None if err is None else err[:, j],
                 capsize=2.5 if err is not None else 0,
                 zorder=3,
-                label=methods[j] if idx == 0 else None,  # only add legend once
+                label=methods[j] if idx == 0 else None,
             )
 
         # Reference bar
@@ -121,9 +145,44 @@ def draw_latency_multi_sizes(
                     fontweight="bold",
                 )
 
+        # NEW: Speed ratio line (7 points: 6 bars + ref)
+        base = float(lat[0, 0])   # w4 Dense
+        speed = base / lat        # (2,3)
+
+        x_pts = np.concatenate([group_x[0] + offsets, group_x[1] + offsets])
+        y_pts = np.concatenate([speed[0, :], speed[1, :]])
+
+        if ref is not None:
+            x_pts = np.concatenate([x_pts, np.array([ref_x])])
+            y_pts = np.concatenate([y_pts, np.array([base / float(ref)])])
+
+        axr = ax.twinx()
+        axr.plot(
+            x_pts, y_pts,
+            color=c_speed,
+            linewidth=speed_lw,
+            marker=speed_marker,
+            markersize=speed_ms,
+            zorder=4,
+        )
+
+        # Right axis: show axis on every subplot; label+ticks only on last subplot
+        axr.set_ylim(0, speed_lim_top)
+        if idx == len(sizes) - 1:
+            axr.set_ylabel("Speed ratio", fontsize=12)
+            # keep tick labels on the last subplot
+            axr.tick_params(axis="y", which="both", labelright=True, right=True)
+        else:
+            axr.set_ylabel("")  # keep clean
+            # hide tick labels for first 3 subplots, but keep right ticks/spine
+            axr.tick_params(axis="y", which="both", labelright=False, right=True)
+
+        axr.spines["top"].set_visible(False)
+        axr.spines["left"].set_visible(False)
+
         # X ticks: group centers + ref
         ax.set_xticks([group_x[0], group_x[1], ref_x] if ref is not None else [group_x[0], group_x[1]])
-        ax.set_xticklabels(labels_groups + (["ref."] if ref is not None else []), fontsize=11)
+        ax.set_xticklabels(labels_groups + (["w1a1"] if ref is not None else []), fontsize=11)
 
         # Y axis
         ax.set_ylim(0, y_lim_top if share_y else max(np.max(lat), (ref or 0)) * 1.25)
@@ -184,12 +243,12 @@ if __name__ == "__main__":
         },
         512: {
             "lat": np.array([[0.010104, 0.011523, 0.004849],
-                             [0.015627, 0.011741, 0.005087]]),
+                             [0.015627, 0.011741, 0.005387]]),
             "ref": 0.008324,
         },
         1024: {
-            "lat": np.array([[0.014376, 0.012480, 0.005280],
-                             [0.020780, 0.012560, 0.005460]]),
+            "lat": np.array([[0.014376, 0.012480, 0.006280],
+                             [0.020780, 0.012560, 0.006860]]),
             "ref": 0.009695,
         },
     }
