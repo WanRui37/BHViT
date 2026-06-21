@@ -47,7 +47,7 @@ def draw_latency_multi_sizes(
             "This 2x2 layout requires exactly four matrix sizes."
         )
 
-    labels_groups = ["w4a4  g=4", "w8a8  g=8"]
+    labels_groups = ["W4A4  g=4", "W8A8  g=8"]
     methods = ["Dense", "BDS-unfused", "BDS-fused"]
 
     # Okabe-Ito-inspired colorblind-friendly colors
