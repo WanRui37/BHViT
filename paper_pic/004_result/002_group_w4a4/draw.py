@@ -17,8 +17,7 @@ plt.rcParams.update({
 
 # ====== 1) Paste your printed groups here ======
 RAW = r"""
-Current Groups:
-  module.blocks.0.attn.qkv: 3
+  module.blocks.0.attn.qkv: 2
   module.blocks.0.attn.proj: 2
   module.blocks.0.mlp.fc1: 1
   module.blocks.0.mlp.fc2: 1
@@ -61,7 +60,7 @@ Current Groups:
   module.blocks.10.attn.qkv: 8
   module.blocks.10.attn.proj: 12
   module.blocks.10.mlp.fc1: 8
-  module.blocks.10.mlp.fc2: 4
+  module.blocks.10.mlp.fc2: 8
   module.blocks.11.attn.qkv: 12
   module.blocks.11.attn.proj: 12
   module.blocks.11.mlp.fc1: 1
